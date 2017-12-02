@@ -13,7 +13,7 @@ mkPairs xs = zip full $ tail full
 mkHalfPairs :: [Int] -> [(Int, Int)]
 mkHalfPairs xs = zip xs rotated
   where
-    half = div (length xs) 2
+    half    = div (length xs) 2
     rotated = drop half xs ++ take half xs
 
 -- Filters pairs where the items are equal
