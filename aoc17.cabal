@@ -1,0 +1,23 @@
+name:                aoc17
+version:             0.1.0.0
+synopsis:            AOC 2017
+homepage:            https://github.com/kshepard/aoc17#readme
+license:             GPLv3
+license-file:        LICENSE
+author:              Kenny Shepard
+maintainer:          kshepard@gmail.com
+copyright:           2017 Kenny Shepard
+category:            Fun
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+description:         Please see the README on Github at <https://github.com/kshepard/aoc17#readme>
+
+library
+  hs-source-dirs:      src
+  build-depends:       base >= 4.7 && < 5
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/kshepard/aoc17
