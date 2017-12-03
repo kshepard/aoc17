@@ -16,6 +16,7 @@ description:         Please see the README on Github at <https://github.com/kshe
 library
   hs-source-dirs:      src
   build-depends:       base >= 4.7 && < 5
+                     , containers
   default-language:    Haskell2010
 
 source-repository head
