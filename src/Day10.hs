@@ -29,6 +29,20 @@ runRounds lens ilst numRounds = go ilst numRounds 0 0
       where
         (newlst, cpos, skip) = knotRound lens ilst' c s
 
+knotHash :: String -> String
+knotHash input = hash
+  where
+    suffixes   = [17, 31, 73, 47, 23] :: [Int]
+    ilst       = [0..255] :: [Int]
+    asciiIn    = map ord $ input
+    p2lens     = asciiIn ++ suffixes
+    p2sparse   = runRounds p2lens ilst 64
+    grouped    = chunksOf 16 p2sparse
+    xored      = map (foldr (xor) 0) grouped
+    hexes      = map (\x -> showHex x "") xored
+    zeroPadded = map (\x -> if length x == 2 then x else "0" ++ x) hexes
+    hash       = foldr (++) "" zeroPadded
+
 main :: IO ()
 main = do
   input <- readFile "input/10.txt"
@@ -37,14 +51,6 @@ main = do
       ilst          = [0..255] :: [Int]
       (p1lst, _, _) = knotRound lens ilst 0 0
       p1a : p1b : _ = p1lst
-      suffixes      = [17, 31, 73, 47, 23] :: [Int]
-      asciiIn       = map ord $ init input
-      p2lens        = asciiIn ++ suffixes
-      p2sparse      = runRounds p2lens ilst 64
-      grouped       = chunksOf 16 p2sparse
-      xored         = map (foldr (xor) 0) grouped
-      hexes         = map (\x -> showHex x "") xored
-      zeroPadded    = map (\x -> if length x == 2 then x else "0" ++ x) hexes
-      hash          = foldr (++) "" zeroPadded
+      hash          = knotHash $ init input
   print $ p1a * p1b
   print hash
