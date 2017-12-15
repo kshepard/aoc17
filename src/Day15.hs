@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -fobject-code -O #-}
 module Day15 where
 
 import qualified Data.Text    as Text
