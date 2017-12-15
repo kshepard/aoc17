@@ -28,6 +28,7 @@ runRounds lens ilst numRounds = go ilst numRounds 0 0
       | otherwise      = go newlst (remaining - 1) cpos skip
       where
         (newlst, cpos, skip) = knotRound lens ilst' c s
+
 main :: IO ()
 main = do
   input <- readFile "input/10.txt"
