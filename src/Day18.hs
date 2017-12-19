@@ -48,10 +48,9 @@ getRV _ (Val v) = v
 getR :: Map.Map TReg TVal -> TReg -> TVal
 getR m r = fromJust $ Map.lookup r m
 
-p1Exec :: [Instr] -> TVal
-p1Exec instrs = go 0 0 mStart
+p1Exec :: [Instr] -> Map.Map TReg TVal -> TVal
+p1Exec instrs mStart = go 0 0 mStart
   where
-    mStart = Map.fromList $ map (\x -> ([x], 0)) ['a'..'z']
     go pos freq m
       | done      = freq
       | otherwise = go newPos newFreq newM
@@ -66,10 +65,47 @@ p1Exec instrs = go 0 0 mStart
           CRcv x   -> (m, pos + 1, freq, if getR m x > 0 then True else False)
           CJgz x y -> (m, if getRV m x > 0 then pos + (getRV m y) else pos + 1, freq, False)
 
+p2Exec :: [Instr] -> Map.Map TReg TVal -> Map.Map TReg TVal -> Int
+p2Exec instrs mStart0 mStart1 = go 0 0 mStart0 mStart1 [] [] 0 0 0
+  where
+    go pos0 pos1 m0 m1 q0 q1 execP p1SendCount waitCount
+      | done      = p1SendCount
+      | otherwise = go newPos0 newPos1 newM0 newM1 newQ0 newQ1 newExecP newP1SendCount newWaitCount
+      where
+        m              = if execP == 0 then m0 else m1
+        q              = if execP == 0 then q0 else q1
+        oq             = if execP == 0 then q1 else q0
+        pos            = if execP == 0 then pos0 else pos1
+        instr          = instrs !! pos
+        newPos0        = if execP == 0 then newPos else pos0
+        newPos1        = if execP == 1 then newPos else pos1
+        newM0          = if execP == 0 then newM else m0
+        newM1          = if execP == 1 then newM else m1
+        newQ0          = if execP == 0 then newQ else newOQ
+        newQ1          = if execP == 1 then newQ else newOQ
+        newExecP       = if receiving then (execP + 1) `mod` 2 else execP
+        newP1SendCount = if sending && execP == 1 then (p1SendCount + 1) else p1SendCount
+        newWaitCount   = if receiving then waitCount + 1 else 0
+        done           = newWaitCount >= 2
+        (newM, newPos, newQ, newOQ, receiving, sending) = case instr of
+          CSnd x   -> (m, pos + 1, q, oq ++ [getRV m x], False, True)
+          CSet x y -> (Map.update (\_ -> Just (getRV m y)) x m, pos + 1, q, oq, False, False)
+          CAdd x y -> (Map.update (\_ -> Just (getRV m y + getR m x)) x m, pos + 1, q, oq, False, False)
+          CMul x y -> (Map.update (\_ -> Just (getRV m y * getR m x)) x m, pos + 1, q, oq, False, False)
+          CMod x y -> (Map.update (\_ -> Just (getR m x `mod` getRV m y)) x m, pos + 1, q, oq, False, False)
+          CRcv x   -> if q == []
+                      then (m, pos, q, oq, True, False)
+                      else (Map.update (\_ -> Just (head q)) x m, pos + 1, tail q, oq, False, False)
+          CJgz x y -> (m, if getRV m x > 0 then pos + (getRV m y) else pos + 1, q, oq, False, False)
+
 main :: IO ()
 main = do
   ls <- fmap Text.lines (Text.readFile "input/18.txt")
-  let raw    = map (\x -> splitOn " " $ Text.unpack x) $ ls
-      instrs = map parse raw
-      part1  = p1Exec instrs
+  let raw     = map (\x -> splitOn " " $ Text.unpack x) $ ls
+      instrs  = map parse raw
+      mStart0 = Map.fromList $ map (\x -> ([x], 0)) ['a'..'z']
+      mStart1 = Map.update (\_ -> Just 1) "p" mStart0
+      part1   = p1Exec instrs mStart0
+      part2   = p2Exec instrs mStart0 mStart1
   print part1
+  print part2
