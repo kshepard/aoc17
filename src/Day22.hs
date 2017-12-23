@@ -1,6 +1,5 @@
 module Day22 where
 
-import Data.List (foldl')
 import qualified Data.Map as Map
 
 type RC     = (Int, Int)
@@ -65,26 +64,24 @@ burst1 (grid, cpos, cdir, numInfected) = (grid', cpos', cdir', numInfected')
 burst2 :: BState -> BState
 burst2 (grid, cpos, cdir, numInfected) = (grid', cpos', cdir', numInfected')
   where
-    status       = getStatus grid cpos
-    cdir'        = case status of
-                     '.' -> turnLeft cdir
-                     'W' -> cdir
-                     '#' -> turnRight cdir
-                     _   -> turnAround cdir
-    newStatus    = case status of
-                     '.' -> 'W'
-                     'W' -> '#'
-                     '#' -> 'F'
-                     _   -> '.'
-    grid'        = setStatus grid cpos newStatus
-    numInfected' = if status == 'W' then numInfected + 1 else numInfected
-    cpos'        = nextPos cpos cdir'
+    status = getStatus grid cpos
+    (cdir', newStatus, numInfected') =
+      case status of
+        '.' -> (turnLeft cdir, 'W', numInfected)
+        'W' -> (cdir, '#', numInfected + 1)
+        '#' -> (turnRight cdir, 'F', numInfected)
+        _   -> (turnAround cdir, '.', numInfected)
+    grid' = setStatus grid cpos newStatus
+    cpos' = nextPos cpos cdir'
+
+solve :: (BState -> BState) -> Grid -> Int -> Int
+solve f grid n = ni
+  where
+    (_, _, _, ni) = iterate f (grid, (0, 0), N, 0) !! n
 
 main :: IO ()
 main = do
   input <- readFile "input/22.txt"
-  let grid          = parseGrid input
-      (_, _, _, p1) = iterate burst1 (grid, (0, 0), N, 0) !! 10000
-      (_, _, _, p2) = iterate burst2 (grid, (0, 0), N, 0) !! 10000000
-  print p1
-  print p2
+  let grid = parseGrid input
+  print $ solve burst1 grid 10000
+  print $ solve burst2 grid 10000000
