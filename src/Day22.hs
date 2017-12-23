@@ -84,7 +84,7 @@ main :: IO ()
 main = do
   input <- readFile "input/22.txt"
   let grid          = parseGrid input
-      (_, _, _, p1) = foldl' (\acc _ -> burst1 acc) (grid, (0, 0), N, 0) ([1..10000] :: [Int])
-      (_, _, _, p2) = foldl' (\acc _ -> burst2 acc) (grid, (0, 0), N, 0) ([1..10000000] :: [Int])
+      (_, _, _, p1) = iterate burst1 (grid, (0, 0), N, 0) !! 10000
+      (_, _, _, p2) = iterate burst2 (grid, (0, 0), N, 0) !! 10000000
   print p1
   print p2
