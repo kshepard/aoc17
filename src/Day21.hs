@@ -1,5 +1,6 @@
 module Day21 where
 
+import Control.Monad.Reader (Reader, ask, runReader)
 import Data.List (foldl', nub, transpose)
 import Data.List.Split (chunksOf, splitOn)
 import Data.Maybe (fromJust)
@@ -7,6 +8,8 @@ import qualified Data.Map as Map
 
 newtype Square = Square [String] deriving (Ord, Eq)
 newtype Rule   = Rule (Square, Square)
+
+data Config = Config Square (Map.Map Square Square)
 
 mkRule :: [Square] -> Rule
 mkRule sqs = Rule (sqs !! 0, sqs !! 1)
@@ -31,29 +34,33 @@ rotSq = revSq . transposeSq
 
 expandRule :: Rule -> [Rule]
 expandRule (Rule (i, o)) =
-  map (\x -> Rule (x, o)) $ nub $ rotations ++ inversions
+  map (\x -> Rule (x, o)) . nub $ rotations ++ inversions
   where
     rotations  = take 4 . iterate rotSq $ i
     inversions = map revSq rotations
 
-getRuleStrings :: [String] -> Map.Map Square Square -> [String]
-getRuleStrings s m = newS
-  where
-    (Square (newS)) = fromJust $ Map.lookup (Square s) m
+getRuleStrings :: [String] -> Reader Config [String]
+getRuleStrings s = do
+  (Config _ m) <- ask
+  let (Square (newS)) = fromJust . Map.lookup (Square s) $ m
+  return newS
 
-enhance :: Square -> Map.Map Square Square -> Square
-enhance (Square r) m = Square enhanced
-  where
-    numChunks = if (even $ length r) then 2 else 3
-    enhanced  = map concat
-      . transpose
-      . (map (\x -> getRuleStrings x m))
-      . transpose
-      . map (chunksOf numChunks)
-      =<< chunksOf numChunks r
+enhance :: Square -> Reader Config Square
+enhance (Square r) = do
+  c <- ask
+  let numChunks = if (even $ length r) then 2 else 3
+      enhanced  = map concat
+        . transpose
+        . map (\x -> runReader (getRuleStrings x) c)
+        . transpose
+        . map (chunksOf numChunks)
+        =<< chunksOf numChunks r
+  return $ Square enhanced
 
-enhanceTimes :: Square -> Map.Map Square Square -> Int -> Square
-enhanceTimes i m x = foldl' (\s _ -> enhance s m) i [1..x]
+enhanceTimes :: Int -> Reader Config Square
+enhanceTimes x = do
+  c@(Config i _) <- ask
+  return . foldl' (\s _ -> runReader (enhance s) c) i $ [1..x]
 
 countOnPixels :: Square -> Int
 countOnPixels (Square s) = length . filter (`elem` "#") . concat $ s
@@ -62,7 +69,8 @@ main :: IO ()
 main = do
   input <- readFile "input/21.txt"
   let rules    = concatMap expandRule . parseRules $ input
-      rulesMap = Map.fromList $ map (\(Rule (i, o)) -> (i, o)) $ rules
+      rulesMap = Map.fromList . map (\(Rule x) -> x) $ rules
       startSq  = Square [".#.", "..#", "###"]
-  print $ countOnPixels $ enhanceTimes startSq rulesMap 5
-  print $ countOnPixels $ enhanceTimes startSq rulesMap 18
+      runTimes = \x -> countOnPixels . runReader (enhanceTimes x) $ Config startSq rulesMap
+  print $ runTimes 5
+  print $ runTimes 18
