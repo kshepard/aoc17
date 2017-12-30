@@ -1,6 +1,9 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Day21 where
 
-import Control.Monad.Reader (Reader, ask, runReader)
+import Control.Monad.Trans
+import Control.Monad.Reader
+
 import Data.List (foldl', nub, transpose)
 import Data.List.Split (chunksOf, splitOn)
 import Data.Maybe (fromJust)
@@ -39,38 +42,40 @@ expandRule (Rule (i, o)) =
     rotations  = take 4 . iterate rotSq $ i
     inversions = map revSq rotations
 
-getRuleStrings :: [String] -> Reader Config [String]
-getRuleStrings s = do
-  (Config _ m) <- ask
-  let (Square (newS)) = fromJust . Map.lookup (Square s) $ m
-  return newS
-
-enhance :: Square -> Reader Config Square
+enhance :: MonadReader Config m => Square -> m (Square)
 enhance (Square r) = do
-  c <- ask
-  let numChunks = if (even $ length r) then 2 else 3
+  Config _ m <- ask
+  let getRuleStrings s = newS
+        where
+          Square (newS) = fromJust . Map.lookup (Square s) $ m
+      numChunks = if even $ length r then 2 else 3
       enhanced  = map concat
         . transpose
-        . map (\x -> runReader (getRuleStrings x) c)
+        . map getRuleStrings
         . transpose
         . map (chunksOf numChunks)
         =<< chunksOf numChunks r
-  return $ Square enhanced
+  return (Square enhanced)
 
-enhanceTimes :: Int -> Reader Config Square
+enhanceTimes :: MonadReader Config m => Int -> m (Square)
 enhanceTimes x = do
-  c@(Config i _) <- ask
-  return . foldl' (\s _ -> runReader (enhance s) c) i $ [1..x]
+  Config i _ <- ask
+  foldM (\s _ -> enhance s) i [1..x]
 
 countOnPixels :: Square -> Int
 countOnPixels (Square s) = length . filter (`elem` "#") . concat $ s
 
-main :: IO ()
-main = do
-  input <- readFile "input/21.txt"
+parseConfig :: MonadIO m => String -> m (Config)
+parseConfig f = do
+  input <- liftIO . readFile $ f
   let rules    = concatMap expandRule . parseRules $ input
       rulesMap = Map.fromList . map (\(Rule x) -> x) $ rules
       startSq  = Square [".#.", "..#", "###"]
-      runTimes = \x -> countOnPixels . runReader (enhanceTimes x) $ Config startSq rulesMap
-  print $ runTimes 5
-  print $ runTimes 18
+      config   = Config startSq rulesMap
+  return config
+
+solve :: (MonadReader Config m, MonadIO m) => [Int] -> m ()
+solve = mapM_ (\x -> enhanceTimes x >>= liftIO . print . countOnPixels)
+
+main :: IO ()
+main = parseConfig "input/21.txt" >>= runReaderT (solve [5, 18])
