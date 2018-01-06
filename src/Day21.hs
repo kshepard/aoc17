@@ -4,7 +4,7 @@ module Day21 where
 import Control.Monad.Trans
 import Control.Monad.Reader
 
-import Data.List (foldl', nub, transpose)
+import Data.List (nub, transpose)
 import Data.List.Split (chunksOf, splitOn)
 import Data.Maybe (fromJust)
 import qualified Data.Map as Map

@@ -34,13 +34,13 @@ nextCoord RIGHT (x, y) = (x + 1, y)
 -- is there an empty space in the rotated position? If not,
 -- just continue on with the current direction.
 nextDir :: Dir -> Coord -> Lookup -> Dir
-nextDir dir coord lookup
+nextDir dir coord lu
   | canRotate = rotated
   | otherwise = dir
   where
     rotated   = rotate dir
     next      = nextCoord rotated coord
-    canRotate = Map.lookup next lookup == Nothing
+    canRotate = Map.lookup next lu == Nothing
 
 -- Creates the spiral.
 -- Lookup is seeded with the origin and given a down
@@ -49,18 +49,18 @@ spiral :: Input -> Stop -> GetVal -> Result
 spiral _ stopCond getVal = go 1 (0, 0) originLookup DOWN
   where
     originLookup = Map.fromList [((0,0), 1)]
-    go i coord lookup dir
+    go i coord lu dir
       | stopCond val = (val, newCoord)
       | otherwise    = go (i + 1) newCoord newLookup newDir
       where
-        newDir    = nextDir dir coord lookup
+        newDir    = nextDir dir coord lu
         newCoord  = nextCoord newDir coord
-        val       = getVal lookup i newCoord
-        newLookup = Map.insert newCoord val lookup
+        val       = getVal lu i newCoord
+        newLookup = Map.insert newCoord val lu
 
 -- Sums values of all adjacents
 sumAdjacents :: GetVal
-sumAdjacents lookup _ (x, y) = sum $ mapMaybe (`Map.lookup` lookup) adjacents
+sumAdjacents lu _ (x, y) = sum $ mapMaybe (`Map.lookup` lu) adjacents
   where
     adjacents = [(x + dx, y + dy) | dx <- [-1..1] , dy <- [-1..1]]
 
